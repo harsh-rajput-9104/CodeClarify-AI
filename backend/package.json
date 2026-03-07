@@ -1,0 +1,21 @@
+{
+  "name": "codeclarify-backend",
+  "version": "1.0.0",
+  "description": "CodeClarify AI Backend - Express.js server with Groq AI integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["ai", "code-analysis", "groq", "express"],
+  "author": "CodeClarify AI",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "groq-sdk": "^0.37.0"
+  }
+}
