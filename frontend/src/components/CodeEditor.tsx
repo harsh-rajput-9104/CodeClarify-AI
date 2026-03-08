@@ -31,18 +31,34 @@ export default function CodeEditor({
 }: CodeEditorProps) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-    // ── Copy-to-clipboard state ─────────────────────────
-    const [copied, setCopied] = useState(false);
+    // ── Copy All state ───────────────────────────────────
+    const [copiedAll, setCopiedAll] = useState(false);
 
-    const handleCopy = useCallback(async () => {
+    const handleCopyAll = useCallback(async () => {
         try {
             await navigator.clipboard.writeText(value);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-        } catch {
-            // Clipboard API not available — silent fail
+            setCopiedAll(true);
+            setTimeout(() => setCopiedAll(false), 1500);
+        } catch (err) {
+            console.error('Copy failed:', err);
         }
     }, [value]);
+
+    // ── Select All (Monaco API — works on mobile) ────────
+    const handleSelectAll = useCallback(() => {
+        const ed = editorRef.current;
+        if (!ed) return;
+        ed.focus();
+        const model = ed.getModel();
+        if (!model) return;
+        const lastLine = model.getLineCount();
+        ed.setSelection({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: lastLine,
+            endColumn: model.getLineMaxColumn(lastLine),
+        });
+    }, []);
 
     /**
      * Called when the Monaco editor mounts.
@@ -177,27 +193,34 @@ export default function CodeEditor({
                     );
                 }
 
-                /* Copy button */
-                .ce-copy-btn {
+                /* ── Header action buttons (copy + select) ── */
+                .ce-hdr-btn {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding: 4px;
-                    border: none;
-                    background: none;
+                    width: 26px;
+                    height: 26px;
+                    padding: 0;
+                    border-radius: 5px;
+                    border: 1px solid transparent;
+                    background: transparent;
                     color: var(--text-muted);
                     cursor: pointer;
-                    border-radius: 4px;
-                    transition: color 0.15s ease, background 0.15s ease;
+                    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
                     position: relative;
+                    flex-shrink: 0;
                 }
-                .ce-copy-btn:hover {
+                .ce-hdr-btn:hover {
                     color: var(--text-primary);
-                    background: rgba(255,255,255,0.05);
+                    border-color: rgba(255,255,255,0.08);
+                    background: rgba(255,255,255,0.04);
+                }
+                .ce-hdr-btn--copied {
+                    color: #34d399 !important;
                 }
 
-                /* Copy tooltip */
-                .ce-copy-tooltip {
+                /* Tooltip shared by both buttons */
+                .ce-hdr-tooltip {
                     position: absolute;
                     bottom: calc(100% + 5px);
                     left: 50%;
@@ -213,9 +236,28 @@ export default function CodeEditor({
                     pointer-events: none;
                     opacity: 0;
                     transition: opacity 0.15s ease;
+                    z-index: 20;
                 }
-                .ce-copy-btn:hover .ce-copy-tooltip {
+                .ce-hdr-btn:hover .ce-hdr-tooltip {
                     opacity: 1;
+                }
+
+                /* Vertical separator before button group */
+                .ce-hdr-sep {
+                    width: 1px;
+                    height: 14px;
+                    background: rgba(255,255,255,0.07);
+                    margin: 0 8px;
+                    flex-shrink: 0;
+                }
+
+                /* Mobile: larger tap targets */
+                @media (max-width: 767px) {
+                    .ce-hdr-btn {
+                        width: 32px;
+                        height: 32px;
+                        padding: 4px;
+                    }
                 }
 
                 /* Panel entrance — wraps the panel on load */
@@ -295,44 +337,44 @@ export default function CodeEditor({
                         {lineCount} ln
                     </span>
 
-                    {/* 1d. Copy button */}
+                    {/* ── Separator + button group ──────────────── */}
+                    <span className="ce-hdr-sep" aria-hidden="true" />
+
+                    {/* BUTTON 1 — Copy All */}
                     <button
-                        className="ce-copy-btn"
-                        onClick={handleCopy}
-                        aria-label="Copy code"
+                        className={`ce-hdr-btn${copiedAll ? " ce-hdr-btn--copied" : ""}`}
+                        onClick={handleCopyAll}
+                        aria-label="Copy all code"
                     >
-                        {copied ? (
-                            /* Checkmark icon */
+                        {copiedAll ? (
+                            /* Checkmark */
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path
-                                    d="M2 6.5L4.5 9L10 3"
-                                    stroke="#34d399"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
+                                <path d="M2 6.5L4.5 9L10 3" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         ) : (
-                            /* Copy icon */
+                            /* Clipboard */
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <rect
-                                    x="4" y="1" width="7" height="7"
-                                    rx="1.5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.2"
-                                />
-                                <path
-                                    d="M1 4.5V10C1 10.55 1.45 11 2 11H7.5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.2"
-                                    strokeLinecap="round"
-                                />
+                                <rect x="4" y="1" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                                <path d="M1 4.5V10C1 10.55 1.45 11 2 11H7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                             </svg>
                         )}
-                        {/* Tooltip */}
-                        <span className="ce-copy-tooltip">
-                            {copied ? "Copied!" : "Copy code"}
+                        <span className="ce-hdr-tooltip">
+                            {copiedAll ? "Copied!" : "Copy all"}
                         </span>
+                    </button>
+
+                    {/* BUTTON 2 — Select All (Monaco API, works on mobile) */}
+                    <button
+                        className="ce-hdr-btn"
+                        onClick={handleSelectAll}
+                        aria-label="Select all code"
+                    >
+                        {/* Selection / cursor icon */}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2.5 1.5" />
+                            <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                        </svg>
+                        <span className="ce-hdr-tooltip">Select all</span>
                     </button>
                 </div>
 
